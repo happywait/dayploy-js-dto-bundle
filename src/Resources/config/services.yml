@@ -1,0 +1,33 @@
+services:
+    Dayploy\JsDtoBundle\Generator\EntityGenerator:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\EntityGenerator"
+        arguments:
+            - '%dayploy.js_dto.source_directory%'
+            - '%dayploy.js_dto.destination_directory%'
+            - '@logger'
+            - '@Dayploy\JsDtoBundle\Generator\Extractor'
+            - '@Dayploy\JsDtoBundle\Generator\TypeGenerator'
+    Dayploy\JsDtoBundle\Generator\Generator:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\Generator"
+        arguments:
+            - '@Dayploy\JsDtoBundle\Generator\EntityGenerator'
+    Dayploy\JsDtoBundle\Generator\TypeGenerator:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\TypeGenerator"
+        arguments:
+            - '@Dayploy\JsDtoBundle\Generator\TypeConverter'
+    Dayploy\JsDtoBundle\Generator\TypeConverter:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\TypeConverter"
+    Dayploy\JsDtoBundle\Generator\Extractor:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\Extractor"
+    Dayploy\JsDtoBundle\Command\EntitiesCommand:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Command\\EntitiesCommand"
+        arguments:
+            - '@Dayploy\JsDtoBundle\Generator\Generator'
+        tags:
+            - { name: 'console.command', command: 'generate:jsdto' }
