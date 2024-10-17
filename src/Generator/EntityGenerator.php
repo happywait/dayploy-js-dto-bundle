@@ -7,7 +7,9 @@ use ReflectionClass;
 
 class EntityGenerator
 {
-    private static string $classTemplate = 'export interface <entityClassName> {
+    private static string $classTemplate = '<imports>
+
+export interface <entityClassName> {
 <entityBody>
 }
 ';
@@ -18,6 +20,8 @@ class EntityGenerator
         private LoggerInterface $logger,
         private Extractor $extractor,
         private TypeGenerator $typeGenerator,
+        private FilenameService $filenameService,
+        private ContentCleaner $contentCleaner,
     ) {
     }
 
@@ -26,37 +30,65 @@ class EntityGenerator
         bool $useBody = true,
     ): string {
         $placeHolders = [
+            '<imports>',
             '<namespace>',
             '<entityClassName>',
             '<entityBody>',
         ];
 
-        $replacements = [
-            $reflectionClass->getNamespaceName(),
-            $this->generateEntityClassName($reflectionClass),
-        ];
-
         if ($useBody) {
-            $replacements[] = $this->generateEntityBody($reflectionClass);
+            $bodyReplacement = $this->generateEntityBody($reflectionClass);
         }
 
-        return str_replace($placeHolders, $replacements, static::$classTemplate);
+        $importStrings = '';
+
+        foreach ($this->filenameService->getImports() as $classname => $path) {
+            $importStrings .= "import { type $classname } from \"$path\"\n";
+        }
+
+        $this->filenameService->clearImports();
+
+        return str_replace($placeHolders, [
+            $importStrings,
+            $reflectionClass->getNamespaceName(),
+            $this->generateEntityClassName($reflectionClass),
+            $bodyReplacement,
+        ], static::$classTemplate);
     }
 
-    public function writeEntityClass(ReflectionClass $reflectionClass): void
-    {
-        $this->logger->info('ENTITY: '.$reflectionClass->getName());
-        $content = $this->generateEntityClass($reflectionClass);
-        $content = $this->removeTrailingSpacesAndTab($content);
-        $cleanedContent = $this->removeDoubleEndLine($content);
+    public function writeEntityClass(
+        ReflectionClass $reflectionClass,
+    ): void {
+        $this->logger->info('CLASS: '.$reflectionClass->getName());
 
-        $targetFileName = $this->getTraitFileName($reflectionClass->getFileName());
+        $content = $this->generateEntityClass($reflectionClass);
+        $content = $this->contentCleaner->removeLeadingNewLines($content);
+        $content = $this->contentCleaner->removeTrailingSpacesAndTab($content);
+        $cleanedContent = $this->contentCleaner->removeDoubleEndLine($content);
+
+        $targetFileName = $this->getTargetedFilename($reflectionClass->getFileName());
+        $this->createDirectories(
+            targetFileName: $targetFileName,
+        );
 
         file_put_contents($targetFileName, $cleanedContent);
     }
 
-    private function getTraitFileName(string $originFileName): string
-    {
+    private function createDirectories(
+        string $targetFileName,
+    ): void {
+        $parentPath = dirname($targetFileName);
+
+        if (!is_dir($parentPath)) {
+            if (!mkdir($parentPath, 0755, true)) {
+                throw new \Exception("Failed creating $parentPath");
+            }
+        }
+    }
+
+    private function getTargetedFilename(
+        string $originFileName,
+    ): string {
         $transformedFileName = str_replace(
             $this->sourceDirectory,
             $this->destinationDirectory,
@@ -72,24 +104,6 @@ class EntityGenerator
     private function generateEntityClassName(ReflectionClass $reflectionClass): string
     {
         return $reflectionClass->getShortName();
-    }
-
-    protected function removeTrailingSpacesAndTab($content): string
-    {
-        $pattern = '/[ ]*\n/';
-        $replacement = "\n";
-        $cleanedContent = preg_replace($pattern, $replacement, $content);
-
-        return $cleanedContent;
-    }
-
-    private function removeDoubleEndLine($content): string
-    {
-        $pattern = '/\n\n/';
-        $replacement = "\n";
-        $cleanedContent = preg_replace($pattern, $replacement, $content);
-
-        return $cleanedContent;
     }
 
     protected function generateEntityProperties(ReflectionClass $reflectionClass): string

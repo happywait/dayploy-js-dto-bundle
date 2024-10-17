@@ -2,38 +2,13 @@
 
 namespace Dayploy\JsDtoBundle\Tests\Generator;
 
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Nyholm\BundleTest\TestKernel;
-use Acme\Service\Foo;
-use Symfony\Component\HttpKernel\KernelInterface;
-use Dayploy\JsDtoBundle\Generator\EntityGenerator;
 use Dayploy\JsDtoBundle\Generator\Generator;
+use Dayploy\JsDtoBundle\Tests\AbstractTestCase;
 
-class GeneratorTest extends KernelTestCase
+class GeneratorTest extends AbstractTestCase
 {
-    protected static function getKernelClass(): string
-    {
-        return TestKernel::class;
-    }
-
-    protected static function createKernel(array $options = []): KernelInterface
-    {
-        /**
-         * @var TestKernel $kernel
-         */
-
-        $kernel = parent::createKernel($options);
-        $kernel->addTestBundle(\Dayploy\JsDtoBundle\JsDtoBundle::class);
-        $kernel->handleOptions($options);
-        $kernel->addTestConfig(__DIR__.'/../config.yml');
-
-        return $kernel;
-    }
-
     public function testGenerate(): void
     {
-        self::bootKernel();
-
         $container = self::getContainer();
 
         $this->assertTrue($container->has(Generator::class));

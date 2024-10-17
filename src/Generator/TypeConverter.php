@@ -2,6 +2,7 @@
 
 namespace Dayploy\JsDtoBundle\Generator;
 
+use DateTimeImmutable;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\TypeInfo\Type;
 use Symfony\Component\TypeInfo\Type\BackedEnumType;
@@ -15,19 +16,30 @@ use Symfony\Component\Uid\Uuid;
 
 class TypeConverter
 {
-    public function convertType(Type $type): string
-    {
+    public function __construct(
+        private FilenameService $filenameService,
+    ) {
+    }
+
+    public function convertType(
+        Type $type,
+    ): string {
         switch ($type::class) {
             case ObjectType::class:
                 /** @var ObjectType $type */
-                if ($type->getClassName() ===  Uuid::class) {
+                if ($type->getClassName() === Uuid::class) {
                     return 'string';
                 }
-                if ($type->getClassName() ===  Collection::class) {
+                if ($type->getClassName() === Collection::class) {
                     return '[]';
                 }
+                if ($type->getClassName() === DateTimeImmutable::class) {
+                    return 'string';
+                }
 
-                return '\\'.$type->getClassName();
+                return $this->filenameService->getObjectFromClassname(
+                    classname: $type->getClassName(),
+                );
             case BuiltinType::class:
                 /** @var BuiltinType $type */
                 if ($type->getTypeIdentifier()->value ===  'int') {
@@ -36,6 +48,10 @@ class TypeConverter
                 if ($type->getTypeIdentifier()->value ===  'array') {
                     return '[]';
                 }
+                if ($type->getTypeIdentifier()->value ===  'bool') {
+                    return 'boolean';
+                }
+
                 return $type->__toString();
             case UnionType::class:
                 /** @var UnionType $type */
@@ -44,14 +60,14 @@ class TypeConverter
                 foreach ($types as $index => $subType) {
                     $str .= $this->convertType($subType);
                     if (($index + 1) < count($types)) {
-                        $str .= '|';
+                        $str .= ' | ';
                     }
                 }
 
                 return $str;
             case BackedEnumType::class:
                 /** @var BackedEnumType $type */
-                return '\\'.$type->getClassName();
+                return 'string';
             case EnumType::class:
                 /** @var EnumType $type */
                 return '\\'.$type->getClassName();
@@ -64,7 +80,13 @@ class TypeConverter
                 return $this->convertType($type->getType());
             case GenericType::class:
                 /** @var GenericType $type */
-                return $this->convertType($type->getType());
+                $variableType = $type->getVariableTypes() ? $type->getVariableTypes()[1] : null;
+                $variableTypePrefix = '';
+                if ($variableType) {
+                    $variableTypePrefix =  $this->convertType($variableType);
+                }
+
+                return $variableTypePrefix.$this->convertType($type->getType());
         }
 
         throw new \LogicException('Class '.$type::class.' not handled');

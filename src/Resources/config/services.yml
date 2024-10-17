@@ -8,11 +8,16 @@ services:
             - '@logger'
             - '@Dayploy\JsDtoBundle\Generator\Extractor'
             - '@Dayploy\JsDtoBundle\Generator\TypeGenerator'
+            - '@Dayploy\JsDtoBundle\Generator\FilenameService'
+            - '@Dayploy\JsDtoBundle\Generator\ContentCleaner'
     Dayploy\JsDtoBundle\Generator\Generator:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\Generator"
         arguments:
             - '@Dayploy\JsDtoBundle\Generator\EntityGenerator'
+    Dayploy\JsDtoBundle\Generator\FilenameService:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\FilenameService"
     Dayploy\JsDtoBundle\Generator\TypeGenerator:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\TypeGenerator"
@@ -21,9 +26,14 @@ services:
     Dayploy\JsDtoBundle\Generator\TypeConverter:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\TypeConverter"
+        arguments:
+            - '@Dayploy\JsDtoBundle\Generator\FilenameService'
     Dayploy\JsDtoBundle\Generator\Extractor:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\Extractor"
+    Dayploy\JsDtoBundle\Generator\ContentCleaner:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\ContentCleaner"
     Dayploy\JsDtoBundle\Command\EntitiesCommand:
         public: true
         class: "Dayploy\\JsDtoBundle\\Command\\EntitiesCommand"

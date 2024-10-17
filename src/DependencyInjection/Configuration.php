@@ -14,7 +14,7 @@ class Configuration implements ConfigurationInterface
         $rootNode = $treeBuilder->getRootNode();
         $rootNode->children()
             ->scalarNode('source_directory')
-                ->defaultValue('/srv/app/src/ApiResource')
+                ->defaultValue('/srv/app/src')
             ->end()
             ->scalarNode('destination_directory')
                 ->defaultValue('/srv/app/assets/model')

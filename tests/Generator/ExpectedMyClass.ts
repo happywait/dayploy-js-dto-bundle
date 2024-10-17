@@ -1,7 +1,9 @@
+import { type ForeignClass } from "@model/Dayploy/JsDtoBundle/Tests/src/Entity/ForeignClass"
+
 export interface MyClass {
   id: string
   number: number
   name: string
-  foreignClasses: []
-  references: []
+  foreignClasses: ForeignClass[]
+  references: number[]
 }

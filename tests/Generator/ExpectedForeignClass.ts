@@ -1,4 +1,6 @@
+import { type MyClass } from "@model/Dayploy/JsDtoBundle/Tests/src/Entity/MyClass"
+
 export interface ForeignClass {
   id: string
-  myClass: \Dayploy\JsDtoBundle\Tests\src\Entity\MyClass|null
+  myClass: MyClass | null
 }
