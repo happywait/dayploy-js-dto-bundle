@@ -40,9 +40,16 @@ export interface <entityClassName> {
             $bodyReplacement = $this->generateEntityBody($reflectionClass);
         }
 
+        $entityClassName = $reflectionClass->getShortName();
+
         $importStrings = '';
 
         foreach ($this->filenameService->getImports() as $classname => $path) {
+            // self referenced class does not add import
+            if ($entityClassName === $classname) {
+                continue;
+            }
+
             $importStrings .= "import { type $classname } from \"$path\"\n";
         }
 
@@ -51,7 +58,7 @@ export interface <entityClassName> {
         return str_replace($placeHolders, [
             $importStrings,
             $reflectionClass->getNamespaceName(),
-            $this->generateEntityClassName($reflectionClass),
+            $entityClassName,
             $bodyReplacement,
         ], static::$classTemplate);
     }
@@ -101,13 +108,9 @@ export interface <entityClassName> {
         return $withoutExtension.'.ts';
     }
 
-    private function generateEntityClassName(ReflectionClass $reflectionClass): string
-    {
-        return $reflectionClass->getShortName();
-    }
-
-    protected function generateEntityProperties(ReflectionClass $reflectionClass): string
-    {
+    protected function generateEntityProperties(
+        ReflectionClass $reflectionClass,
+    ): string {
         $properties = [];
 
         foreach ($reflectionClass->getProperties() as $property) {
@@ -125,7 +128,9 @@ export interface <entityClassName> {
         return implode("\n\n", array_filter($properties));
     }
 
-    protected function generateEntityBody(ReflectionClass $reflectionClass): string
+    protected function generateEntityBody(
+        ReflectionClass $reflectionClass,
+    ): string
     {
         $stubMethods = $this->generateEntityProperties($reflectionClass);
         $code = [];
