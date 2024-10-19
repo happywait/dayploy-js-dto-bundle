@@ -7,60 +7,14 @@ use ReflectionClass;
 
 class EntityGenerator
 {
-    private static string $classTemplate = '<imports>
-
-export interface <entityClassName> {
-<entityBody>
-}
-';
-
     public function __construct(
         private string $sourceDirectory,
         private string $destinationDirectory,
         private LoggerInterface $logger,
-        private Extractor $extractor,
-        private TypeGenerator $typeGenerator,
-        private FilenameService $filenameService,
         private ContentCleaner $contentCleaner,
+        private ClassGenerator $classGenerator,
+        private EnumGenerator $enumGenerator,
     ) {
-    }
-
-    private function generateEntityClass(
-        ReflectionClass $reflectionClass,
-        bool $useBody = true,
-    ): string {
-        $placeHolders = [
-            '<imports>',
-            '<namespace>',
-            '<entityClassName>',
-            '<entityBody>',
-        ];
-
-        if ($useBody) {
-            $bodyReplacement = $this->generateEntityBody($reflectionClass);
-        }
-
-        $entityClassName = $reflectionClass->getShortName();
-
-        $importStrings = '';
-
-        foreach ($this->filenameService->getImports() as $classname => $path) {
-            // self referenced class does not add import
-            if ($entityClassName === $classname) {
-                continue;
-            }
-
-            $importStrings .= "import { type $classname } from \"$path\"\n";
-        }
-
-        $this->filenameService->clearImports();
-
-        return str_replace($placeHolders, [
-            $importStrings,
-            $reflectionClass->getNamespaceName(),
-            $entityClassName,
-            $bodyReplacement,
-        ], static::$classTemplate);
     }
 
     public function writeEntityClass(
@@ -68,7 +22,12 @@ export interface <entityClassName> {
     ): void {
         $this->logger->info('CLASS: '.$reflectionClass->getName());
 
-        $content = $this->generateEntityClass($reflectionClass);
+        if ($reflectionClass->isEnum()) {
+            $content = $this->enumGenerator->generateEntityClass($reflectionClass);
+        } else {
+            $content = $this->classGenerator->generateEntityClass($reflectionClass);
+        }
+
         $content = $this->contentCleaner->removeLeadingNewLines($content);
         $content = $this->contentCleaner->removeTrailingSpacesAndTab($content);
         $cleanedContent = $this->contentCleaner->removeDoubleEndLine($content);
@@ -106,39 +65,5 @@ export interface <entityClassName> {
         $withoutExtension = substr($transformedFileName, 0, strlen($transformedFileName) - 4);
 
         return $withoutExtension.'.ts';
-    }
-
-    protected function generateEntityProperties(
-        ReflectionClass $reflectionClass,
-    ): string {
-        $properties = [];
-
-        foreach ($reflectionClass->getProperties() as $property) {
-            $propertyName = $property->getName();
-            $this->logger->info('PROPERTY: '.$propertyName);
-            $type = $this->extractor->getType($reflectionClass->getName(), $propertyName);
-
-            // the mixed type gives a null value
-            if (null === $type) {
-                continue;
-            }
-            $properties[] = $this->typeGenerator->generate($propertyName, $type);
-        }
-
-        return implode("\n\n", array_filter($properties));
-    }
-
-    protected function generateEntityBody(
-        ReflectionClass $reflectionClass,
-    ): string
-    {
-        $stubMethods = $this->generateEntityProperties($reflectionClass);
-        $code = [];
-
-        if ($stubMethods) {
-            $code[] = $stubMethods;
-        }
-
-        return implode("\n", $code);
     }
 }

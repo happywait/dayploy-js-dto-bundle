@@ -6,10 +6,20 @@ services:
             - '%dayploy.js_dto.source_directory%'
             - '%dayploy.js_dto.destination_directory%'
             - '@logger'
+            - '@Dayploy\JsDtoBundle\Generator\ContentCleaner'
+            - '@Dayploy\JsDtoBundle\Generator\ClassGenerator'
+            - '@Dayploy\JsDtoBundle\Generator\EnumGenerator'
+    Dayploy\JsDtoBundle\Generator\EnumGenerator:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\EnumGenerator"
+    Dayploy\JsDtoBundle\Generator\ClassGenerator:
+        public: true
+        class: "Dayploy\\JsDtoBundle\\Generator\\ClassGenerator"
+        arguments:
+            - '@logger'
             - '@Dayploy\JsDtoBundle\Generator\Extractor'
             - '@Dayploy\JsDtoBundle\Generator\TypeGenerator'
             - '@Dayploy\JsDtoBundle\Generator\FilenameService'
-            - '@Dayploy\JsDtoBundle\Generator\ContentCleaner'
     Dayploy\JsDtoBundle\Generator\Generator:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\Generator"

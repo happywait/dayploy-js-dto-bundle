@@ -20,6 +20,8 @@ class GeneratorTest extends AbstractTestCase
         $this->assertGeneratedFile('MyClass');
         $this->assertGeneratedFile('ForeignClass');
         $this->assertGeneratedFile('AutorefClass');
+        $this->assertGeneratedFile('IntValuesEnum');
+        $this->assertGeneratedFile('StringValuesEnum');
     }
 
     private function assertGeneratedFile(string $filename): void

@@ -14,7 +14,7 @@ class AnnotationCollectionFactoryTest extends KernelTestCase
         $factoryAnnotation = new AnnotationCollectionFactory(['./tests/src']);
         $classes = $factoryAnnotation->create();
 
-        $this->assertCount(3, $classes);
+        $this->assertCount(5, $classes);
         $this->assertArrayHasKey(MyClass::class, $classes);
         $firstClass = $classes[MyClass::class];
 
