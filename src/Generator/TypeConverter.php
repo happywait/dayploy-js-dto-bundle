@@ -67,7 +67,9 @@ class TypeConverter
                 return $str;
             case BackedEnumType::class:
                 /** @var BackedEnumType $type */
-                return 'string';
+                return $this->filenameService->getObjectFromClassname(
+                    classname: $type->getClassName(),
+                );
             case EnumType::class:
                 /** @var EnumType $type */
                 return '\\'.$type->getClassName();

@@ -22,4 +22,7 @@ class MyClass
      * @var array<int>
      */
     private array $references;
+
+    private IntValuesEnum $intEnum;
+    private StringValuesEnum $stringEnum;
 }
