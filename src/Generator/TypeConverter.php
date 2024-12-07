@@ -42,13 +42,16 @@ class TypeConverter
                 );
             case BuiltinType::class:
                 /** @var BuiltinType $type */
-                if ($type->getTypeIdentifier()->value ===  'int') {
+                if ($type->getTypeIdentifier()->value === 'int') {
                     return 'number';
                 }
-                if ($type->getTypeIdentifier()->value ===  'array') {
+                if ($type->getTypeIdentifier()->value === 'float') {
+                    return 'number';
+                }
+                if ($type->getTypeIdentifier()->value === 'array') {
                     return '[]';
                 }
-                if ($type->getTypeIdentifier()->value ===  'bool') {
+                if ($type->getTypeIdentifier()->value === 'bool') {
                     return 'boolean';
                 }
 
