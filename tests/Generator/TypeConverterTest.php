@@ -11,6 +11,7 @@ use Symfony\Component\TypeInfo\Type\GenericType;
 use Symfony\Component\TypeInfo\Type\ObjectType;
 use Symfony\Component\TypeInfo\Type\UnionType;
 use Symfony\Component\TypeInfo\TypeIdentifier;
+use Symfony\Component\TypeInfo\Type\NullableType;
 
 class TypeConverterTest extends AbstractTestCase
 {
@@ -25,14 +26,12 @@ class TypeConverterTest extends AbstractTestCase
         $generic = new GenericType($arrayType);
         $type = new CollectionType(
             type: $generic,
-            // isList: true,
         );
         $converted = $service->convertType($type);
         $this->assertSame('[]', $converted);
 
         $intType = new BuiltinType(TypeIdentifier::INT);
         $stringType = new BuiltinType(TypeIdentifier::STRING);
-        $nullType = new BuiltinType(TypeIdentifier::NULL);
 
         $generic = new GenericType(
             $arrayType,
@@ -51,7 +50,7 @@ class TypeConverterTest extends AbstractTestCase
         );
         $unionType = new UnionType(
             $entityType,
-            $nullType,
+            $stringType,
         );
 
         $generic = new GenericType(
@@ -64,6 +63,10 @@ class TypeConverterTest extends AbstractTestCase
             isList: true,
         );
         $converted = $service->convertType($type);
-        $this->assertSame('Class | null[]', $converted);
+        $this->assertSame('Class | string[]', $converted);
+
+        $nullType = new NullableType($stringType);
+        $convertedNullable = $service->convertType($nullType);
+        $this->assertSame('string | null', $convertedNullable);
     }
 }
