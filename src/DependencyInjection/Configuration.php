@@ -19,6 +19,9 @@ class Configuration implements ConfigurationInterface
             ->scalarNode('destination_directory')
                 ->defaultValue('/srv/app/assets/model')
             ->end()
+            ->scalarNode('model_path')
+                ->defaultValue('model')
+            ->end()
         ;
 
         return $treeBuilder;

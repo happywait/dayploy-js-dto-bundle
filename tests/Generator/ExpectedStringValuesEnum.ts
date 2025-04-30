@@ -1,5 +1,5 @@
 export enum StringValuesEnum {
-  none = "none",
-  warning = "warning",
-  error = "error",
+  none = 'none',
+  warning = 'warning',
+  error = 'error',
 }

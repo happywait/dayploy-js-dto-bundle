@@ -38,7 +38,7 @@ export enum <entityClassName> {
         foreach ($cases as $case) {
             $value = $case->value;
             if (is_string($value)) {
-                $value = '"'.$value.'"';
+                $value = '\''.$value.'\'';
             }
             $code[] = '  '.$case->name.' = '.$value.',';
         }

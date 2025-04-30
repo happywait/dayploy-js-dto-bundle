@@ -18,8 +18,8 @@ class FilenameServiceTest extends AbstractTestCase
         $this->assertSame('Class', $service->getObjectFromClassname('Path\To\Class'));
 
         $this->assertSame([
-            'SomeString' => '@model/SomeString',
-            'Class' => '@model/Path/To/Class',
+            'SomeString' => 'model/SomeString',
+            'Class' => 'model/Path/To/Class',
         ], $service->getImports());
     }
 }

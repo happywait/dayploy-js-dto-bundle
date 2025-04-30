@@ -44,7 +44,7 @@ export interface <entityClassName> {
                 continue;
             }
 
-            $importStrings .= "import { type $classname } from \"$path\"\n";
+            $importStrings .= "import { type $classname } from '$path'\n";
         }
 
         $this->filenameService->clearImports();

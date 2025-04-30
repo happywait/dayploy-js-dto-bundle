@@ -28,6 +28,8 @@ services:
     Dayploy\JsDtoBundle\Generator\FilenameService:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\FilenameService"
+        arguments:
+            - '%dayploy.js_dto.model_path%'
     Dayploy\JsDtoBundle\Generator\TypeGenerator:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\TypeGenerator"

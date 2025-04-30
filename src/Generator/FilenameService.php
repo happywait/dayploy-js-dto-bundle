@@ -4,6 +4,11 @@ namespace Dayploy\JsDtoBundle\Generator;
 
 class FilenameService
 {
+    public function __construct(
+        private readonly string $modelPath,
+    ) {
+    }
+
     /** store converted object to add to the top import */
     private $imports = [];
 
@@ -47,7 +52,7 @@ class FilenameService
             '/',
             $classname,
         );
-        $classname = '@model/'.$classname;
+        $classname = $this->modelPath.'/'.$classname;
 
         return str_replace(
             '//',
