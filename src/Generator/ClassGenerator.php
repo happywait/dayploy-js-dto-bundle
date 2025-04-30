@@ -2,6 +2,7 @@
 
 namespace Dayploy\JsDtoBundle\Generator;
 
+use Dayploy\JsDtoBundle\Attributes\JsDtoIgnore;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 
@@ -65,6 +66,13 @@ export interface <entityClassName> {
         foreach ($reflectionClass->getProperties() as $property) {
             $propertyName = $property->getName();
             $this->logger->info('PROPERTY: '.$propertyName);
+
+            $attributes = $property->getAttributes();
+            if (!$this->isPropertyIncluded($attributes)) {
+                $this->logger->info('IGNORED');
+                continue;
+            }
+
             $type = $this->extractor->getType($reflectionClass->getName(), $propertyName);
 
             // the mixed type gives a null value
@@ -90,5 +98,17 @@ export interface <entityClassName> {
         }
 
         return implode("\n", $code);
+    }
+
+    private function isPropertyIncluded(
+        array $attributes,
+    ): bool {
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === JsDtoIgnore::class) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

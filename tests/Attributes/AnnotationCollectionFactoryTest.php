@@ -18,7 +18,7 @@ class AnnotationCollectionFactoryTest extends KernelTestCase
         $this->assertArrayHasKey(MyClass::class, $classes);
         $firstClass = $classes[MyClass::class];
 
-        $this->assertCount(7, $firstClass->getProperties());
+        $this->assertCount(8, $firstClass->getProperties());
         $this->assertCount(1, $firstClass->getAttributes());
         $this->assertSame(JsDto::class, $firstClass->getAttributes()[0]->getName());
     }

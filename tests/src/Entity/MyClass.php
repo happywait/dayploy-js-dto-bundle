@@ -5,6 +5,7 @@ namespace Dayploy\JsDtoBundle\Tests\src\Entity;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Uid\Uuid;
 use Dayploy\JsDtoBundle\Attributes\JsDto;
+use Dayploy\JsDtoBundle\Attributes\JsDtoIgnore;
 
 #[JsDto]
 class MyClass
@@ -25,4 +26,7 @@ class MyClass
 
     private IntValuesEnum $intEnum;
     private StringValuesEnum $stringEnum;
+
+    #[JsDtoIgnore]
+    private string $propertyToIgnore;
 }
