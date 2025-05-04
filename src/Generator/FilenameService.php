@@ -31,7 +31,7 @@ class FilenameService
 
         $this->imports[$objectName] = $this->getPathFromClassname(
             classname: $classname,
-            prefixToRemove: 'App',
+            prefixToRemove: 'App\\',
         );
 
         return $objectName;
