@@ -18,7 +18,7 @@ services:
         arguments:
             - '@logger'
             - '@Dayploy\JsDtoBundle\Generator\Extractor'
-            - '@Dayploy\JsDtoBundle\Generator\TypeGenerator'
+            - '@Dayploy\JsDtoBundle\Generator\TypeConverter'
             - '@Dayploy\JsDtoBundle\Generator\FilenameService'
     Dayploy\JsDtoBundle\Generator\Generator:
         public: true

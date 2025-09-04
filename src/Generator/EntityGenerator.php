@@ -24,15 +24,24 @@ class EntityGenerator
 
         if ($reflectionClass->isEnum()) {
             $content = $this->enumGenerator->generateEntityClass($reflectionClass);
-        } else {
-            $content = $this->classGenerator->generateEntityClass($reflectionClass);
-        }
 
+            $this->writeEntityClassFile($content, $reflectionClass->getFileName());
+        } else {
+            $classes = $this->classGenerator->generateEntityClasses($reflectionClass);
+
+            foreach ($classes as $class) {
+                $this->writeEntityClassFile($class['content'], $class['name']);
+            }
+        }
+    }
+
+    public function writeEntityClassFile(string $content, string $filename)
+    {
         $content = $this->contentCleaner->removeLeadingNewLines($content);
         $content = $this->contentCleaner->removeTrailingSpacesAndTab($content);
         $cleanedContent = $this->contentCleaner->removeDoubleEndLine($content);
 
-        $targetFileName = $this->getTargetedFilename($reflectionClass->getFileName());
+        $targetFileName = $this->getTargetedFilename($filename);
         $this->createDirectories(
             targetFileName: $targetFileName,
         );

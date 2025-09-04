@@ -37,7 +37,7 @@ class FilenameService
         return $objectName;
     }
 
-    private function getPathFromClassname(
+    public function getPathFromClassname(
         string $classname,
         string $prefixToRemove,
     ): string {

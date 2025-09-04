@@ -2,46 +2,125 @@
 
 namespace Dayploy\JsDtoBundle\Generator;
 
+use ApiPlatform\Metadata\Delete;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\HttpOperation;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
+use Dayploy\JsDtoBundle\Attributes\JsDto;
 use Dayploy\JsDtoBundle\Attributes\JsDtoIgnore;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
+use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\TypeInfo\Type;
 
 class ClassGenerator
 {
-    private static string $classTemplate = '<imports>
+    private static string $fileTemplate = '<imports>
 
-export interface <entityClassName> {
+<classes>
+';
+    private static string $classTemplate = 'export type <entityClassName> = {
 <entityBody>
 }
 ';
+    private static string $fieldTemplate = '  <fieldName>: <type>';
 
     public function __construct(
         private LoggerInterface $logger,
         private Extractor $extractor,
-        private TypeGenerator $typeGenerator,
+        private TypeConverter $typeConverter,
         private FilenameService $filenameService,
     ) {
     }
 
+    public function generateEntityClasses(
+        ReflectionClass $reflectionClass,
+    ): array {
+        $routeAttributes = $reflectionClass->getAttributes(HttpOperation::class, \ReflectionAttribute::IS_INSTANCEOF);
+
+        $result = [];
+
+        /** @var HttpOperation $routeAttribute */
+        foreach ($routeAttributes as $routeAttribute) {
+            $args = $routeAttribute->getArguments();
+            if (array_key_exists('normalizationContext', $args) && array_key_exists('groups', $args['normalizationContext'])) {
+                $groups = $args['normalizationContext']['groups'];
+            } else {
+                $groups = ['default'];
+            }
+
+            foreach ($groups as $group) {
+                $fileName = explode(':', $group);
+                $fileName = implode('', array_map('ucfirst', $fileName));
+                $folder = $reflectionClass->getFileName();
+                $folder = explode('.', $folder);
+                $fileName .= '.'.$folder[1];
+                $folder = $folder[0];
+                $result[] = [
+                    'name' => $folder.'/'.$fileName,
+                    'content' => $this->generateEntityClass($reflectionClass, $group)
+                ];
+            }
+        }
+
+        return $result;
+    }
+
     public function generateEntityClass(
         ReflectionClass $reflectionClass,
+        string $group
     ): string {
         $placeHolders = [
             '<imports>',
             '<namespace>',
-            '<entityClassName>',
-            '<entityBody>',
+            '<classes>'
         ];
 
-        $bodyReplacement = $this->generateEntityBody($reflectionClass);
+        $data = $this->generateEntityClassData($reflectionClass, $group);
 
+        return str_replace($placeHolders, $data, static::$fileTemplate);
+    }
+
+    public function generateEntityClassData(
+        ReflectionClass $reflectionClass,
+        string $group
+    ): array {
+        $placeHolders = [
+            '<entityClassName>',
+            '<entityBody>'
+        ];
         $entityClassName = $reflectionClass->getShortName();
 
+        $bodyData = $this->generateEntityBody($reflectionClass, $group);
+
+        $bodyReplacement = $bodyData['body'];
+
+        $classesDefinition = str_replace($placeHolders, [
+            $entityClassName,
+            $bodyReplacement,
+        ], static::$classTemplate);
+
         $importStrings = '';
+
+        /** @var Type\ObjectType $subClass */
+        foreach ($bodyData['subClasses'] as $subClass) {
+            $subClassesData = $this->generateEntityClassData($subClass, $group);
+            $importStrings .= $subClassesData[0];
+
+            $classesDefinition .= "\n\n".$subClassesData[2];
+        }
+
 
         foreach ($this->filenameService->getImports() as $classname => $path) {
             // self referenced class does not add import
             if ($entityClassName === $classname) {
+                continue;
+            }
+
+            // Include only enums
+            if (!str_contains($path, '/Enum/')) {
                 continue;
             }
 
@@ -50,25 +129,35 @@ export interface <entityClassName> {
 
         $this->filenameService->clearImports();
 
-        return str_replace($placeHolders, [
+        return [
             $importStrings,
             $reflectionClass->getNamespaceName(),
-            $entityClassName,
-            $bodyReplacement,
-        ], static::$classTemplate);
+            $classesDefinition
+        ];
     }
 
     protected function generateEntityProperties(
         ReflectionClass $reflectionClass,
-    ): string {
+        string $group
+    ): array {
         $properties = [];
+        $subClasses = [];
 
-        foreach ($reflectionClass->getProperties() as $property) {
+        $reflectionProperties = [];
+        $currentClass = $reflectionClass;
+        /** @var ReflectionClass $parent */
+        do {
+            foreach ($currentClass->getProperties() as $property) {
+                $reflectionProperties[] = $property;
+            }
+        } while ($currentClass = $currentClass->getParentClass());
+
+        foreach ($reflectionProperties as $property) {
             $propertyName = $property->getName();
             $this->logger->info('PROPERTY: '.$propertyName);
 
             $attributes = $property->getAttributes();
-            if (!$this->isPropertyIncluded($attributes)) {
+            if (!$this->isPropertyIncluded($attributes, $group)) {
                 $this->logger->info('IGNORED');
                 continue;
             }
@@ -79,36 +168,87 @@ export interface <entityClassName> {
             if (null === $type) {
                 continue;
             }
-            $properties[] = $this->typeGenerator->generate($propertyName, $type);
+            $field = $this->generateField($propertyName, $type);
+
+            $properties[] = $field['method'];
+            $subClasses = array_merge($subClasses, $field['subClasses']);
         }
 
-        return implode("\n\n", array_filter($properties));
+        return [
+            'body' => implode("\n\n", array_filter($properties)),
+            'subClasses' => $subClasses
+        ];
     }
 
     protected function generateEntityBody(
         ReflectionClass $reflectionClass,
-    ): string {
+        string $group
+    ): array {
         $code = [];
 
         // EnumType
-        $stubMethods = $this->generateEntityProperties($reflectionClass);
+        $stubMethods = $this->generateEntityProperties($reflectionClass, $group);
 
-        if ($stubMethods) {
-            $code[] = $stubMethods;
+        if ($stubMethods['body']) {
+            $code[] = $stubMethods['body'];
         }
 
-        return implode("\n", $code);
+        return [
+            'body' => implode("\n", $code),
+            'subClasses' => $stubMethods['subClasses']
+        ];
     }
 
+    /**
+     * @param \ReflectionAttribute[] $attributes
+     * @param string $group
+     * @return bool
+     */
     private function isPropertyIncluded(
         array $attributes,
+        string $group
     ): bool {
         foreach ($attributes as $attribute) {
             if ($attribute->getName() === JsDtoIgnore::class) {
                 return false;
             }
+            if (in_array($attribute->getName(), [Groups::class, \Symfony\Component\Serializer\Annotation\Groups::class])) {
+                $args = $attribute->getArguments();
+                $groups = [];
+                if (array_key_exists('groups', $args)) {
+                    $groups = $args['groups'];
+                } else if (array_key_exists(0, $args)) {
+                    $groups = $args[0];
+                } else {
+                    $groups = ['default'];
+                }
+                if (!in_array($group, $groups)) {
+                    return false;
+                }
+            }
         }
 
         return true;
+    }
+
+    private function generateField(
+        string $fieldName,
+        Type $type,
+    ): array {
+        $replacements = [
+            '<type>' => $this->typeConverter->convertType($type),
+            '<fieldName>' => $fieldName,
+        ];
+
+        $method = str_replace(
+            array_keys($replacements),
+            array_values($replacements),
+            self::$fieldTemplate
+        );
+
+        return [
+            "method" => $method,
+            "subClasses" => $this->typeConverter->extractOtherDtosClasses($type)
+        ];
     }
 }

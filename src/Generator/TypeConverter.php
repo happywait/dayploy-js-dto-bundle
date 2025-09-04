@@ -24,6 +24,46 @@ class TypeConverter
     ) {
     }
 
+    public function extractOtherDtosClasses(
+        Type $type
+    ): array {
+        $result = [];
+        switch ($type::class) {
+            case ObjectType::class:
+                /** @var ObjectType $type */
+                if (in_array($type->getClassName(), [Uuid::class, Collection::class, DateTimeImmutable::class, UploadedFile::class, File::class])) {
+                    return [];
+                }
+
+                return [new \ReflectionClass($type->getClassName())];
+            case UnionType::class:
+                /** @var UnionType $type */
+                $types = $type->getTypes();
+                foreach ($types as $index => $subType) {
+                    $result = array_merge($result, $this->extractOtherDtosClasses($subType));
+                }
+
+                return $result;
+            case CollectionType::class:
+                /** @var CollectionType $type */
+                return array_merge($result, $this->extractOtherDtosClasses($type->getWrappedType()));
+            case GenericType::class:
+                /** @var GenericType $type */
+                $variableType = $type->getVariableTypes() ? $type->getVariableTypes()[1] : null;
+                if ($variableType) {
+                    return array_merge($result, $this->extractOtherDtosClasses($variableType));
+                }
+
+                return [];
+            case NullableType::class:
+                return array_merge($result, $this->extractOtherDtosClasses($type->getWrappedType()));
+            default:
+                return [];
+        }
+
+        throw new \LogicException('Class '.$type::class.' not handled');
+    }
+
     public function convertType(
         Type $type,
     ): string {
@@ -39,9 +79,8 @@ class TypeConverter
                 if ($type->getClassName() === DateTimeImmutable::class) {
                     return 'string';
                 }
-
                 if ($type->getClassName() === UploadedFile::class) {
-                    return 'string';
+                    return 'File';
                 }
                 if ($type->getClassName() === File::class) {
                     return 'string';
