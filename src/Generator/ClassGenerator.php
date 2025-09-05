@@ -52,14 +52,8 @@ class ClassGenerator
             }
 
             foreach ($groups as $group) {
-                $fileName = explode(':', $group);
-                $fileName = implode('', array_map('ucfirst', $fileName));
-                $folder = $reflectionClass->getFileName();
-                $folder = explode('.', $folder);
-                $fileName .= '.'.$folder[1];
-                $folder = $folder[0];
                 $result[] = [
-                    'name' => $folder.'/'.$fileName,
+                    'name' => $this->generateFilepath($reflectionClass, $group),
                     'content' => $this->generateEntityClass($reflectionClass, $group)
                 ];
             }
@@ -80,7 +74,11 @@ class ClassGenerator
 
         $data = $this->generateEntityClassData($reflectionClass, $group);
 
-        return str_replace($placeHolders, $data, static::$fileTemplate);
+        return str_replace($placeHolders, [
+            $data[0],
+            $data[1],
+            implode("\n\n", $data[2])
+        ], static::$fileTemplate);
     }
 
     public function generateEntityClassData(
@@ -97,10 +95,10 @@ class ClassGenerator
 
         $bodyReplacement = $bodyData['body'];
 
-        $classesDefinition = str_replace($placeHolders, [
-            $entityClassName,
+        $classesDefinition = [str_replace($placeHolders, [
+            $entityClassName.$this->generateFilename($group),
             $bodyReplacement,
-        ], static::$classTemplate);
+        ], static::$classTemplate)];
 
         $importStrings = '';
 
@@ -109,7 +107,12 @@ class ClassGenerator
             $subClassesData = $this->generateEntityClassData($subClass, $group);
             $importStrings .= $subClassesData[0];
 
-            $classesDefinition .= "\n\n".$subClassesData[2];
+            foreach ($subClassesData[2] as $def) {
+                if (!in_array($def, $classesDefinition)) {
+                    $classesDefinition[] = $def;
+                }
+            }
+
         }
 
 
@@ -168,7 +171,7 @@ class ClassGenerator
             if (null === $type) {
                 continue;
             }
-            $field = $this->generateField($propertyName, $type);
+            $field = $this->generateField($propertyName, $type, $group);
 
             $properties[] = $field['method'];
             $subClasses = array_merge($subClasses, $field['subClasses']);
@@ -234,9 +237,10 @@ class ClassGenerator
     private function generateField(
         string $fieldName,
         Type $type,
+        string $group
     ): array {
         $replacements = [
-            '<type>' => $this->typeConverter->convertType($type),
+            '<type>' => $this->typeConverter->convertType($type, $this->generateFilename($group)),
             '<fieldName>' => $fieldName,
         ];
 
@@ -250,5 +254,26 @@ class ClassGenerator
             "method" => $method,
             "subClasses" => $this->typeConverter->extractOtherDtosClasses($type)
         ];
+    }
+
+    private function generateFilepath(
+        ReflectionClass $reflectionClass,
+        string $group
+    ): string {
+        $folder = $reflectionClass->getFileName();
+        $folder = explode('.', $folder);
+        $extension = $folder[1];
+        $folder = $folder[0];
+
+        return $folder.'/'.$this->generateFilename($group).'.'.$extension;
+    }
+
+    private function generateFilename(
+        string $group
+    ): string {
+        $fileName = explode(':', $group);
+        $fileName = implode('', array_map('ucfirst', $fileName));
+
+        return $fileName;
     }
 }

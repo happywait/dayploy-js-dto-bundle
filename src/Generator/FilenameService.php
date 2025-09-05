@@ -24,6 +24,7 @@ class FilenameService
 
     public function getObjectFromClassname(
         string $classname,
+        string $suffix = ''
     ): string {
         $elements = explode('\\', $classname);
 
@@ -33,6 +34,10 @@ class FilenameService
             classname: $classname,
             prefixToRemove: 'App\\',
         );
+
+        if (!str_contains($classname, '\\Enum\\')) {
+            $objectName = $objectName.$suffix;
+        }
 
         return $objectName;
     }

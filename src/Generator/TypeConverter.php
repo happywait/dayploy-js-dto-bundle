@@ -66,6 +66,7 @@ class TypeConverter
 
     public function convertType(
         Type $type,
+        string $suffix = '',
     ): string {
         switch ($type::class) {
             case ObjectType::class:
@@ -88,6 +89,7 @@ class TypeConverter
 
                 return $this->filenameService->getObjectFromClassname(
                     classname: $type->getClassName(),
+                    suffix: $suffix
                 );
             case BuiltinType::class:
                 /** @var BuiltinType $type */
@@ -110,7 +112,7 @@ class TypeConverter
                 $types = $type->getTypes();
                 $str = '';
                 foreach ($types as $index => $subType) {
-                    $str .= $this->convertType($subType);
+                    $str .= $this->convertType($subType, $suffix);
                     if (($index + 1) < count($types)) {
                         $str .= ' | ';
                     }
@@ -121,6 +123,7 @@ class TypeConverter
                 /** @var BackedEnumType $type */
                 return $this->filenameService->getObjectFromClassname(
                     classname: $type->getClassName(),
+                    suffix: $suffix
                 );
             case EnumType::class:
                 /** @var EnumType $type */
@@ -128,22 +131,22 @@ class TypeConverter
             case CollectionType::class:
                 /** @var CollectionType $type */
                 if ($type->isList()) {
-                    return $this->convertType($type->getWrappedType());
+                    return $this->convertType($type->getWrappedType(), $suffix);
                 }
 
-                return $this->convertType($type->getWrappedType());
+                return $this->convertType($type->getWrappedType(), $suffix);
             case GenericType::class:
                 /** @var GenericType $type */
                 $variableType = $type->getVariableTypes() ? $type->getVariableTypes()[1] : null;
-                $variableTypePrefix = '';
+                $variableTypesuffix = '';
                 if ($variableType) {
-                    $variableTypePrefix =  $this->convertType($variableType);
+                    $variableTypesuffix =  $this->convertType($variableType, $suffix);
                 }
 
-                return $variableTypePrefix.$this->convertType($type->getWrappedType());
+                return $variableTypesuffix.$this->convertType($type->getWrappedType(), $suffix);
             case NullableType::class:
                 /** @var NullableType $type */
-                return $this->convertType($type->getWrappedType()).' | null';
+                return $this->convertType($type->getWrappedType(), $suffix).' | null';
         }
 
         throw new \LogicException('Class '.$type::class.' not handled');
