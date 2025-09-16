@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use Dayploy\JsDtoBundle\Attributes\JsDto;
 use Dayploy\JsDtoBundle\Attributes\JsDtoIgnore;
+use Dayploy\JsDtoBundle\Attributes\JsDtoNotNullable;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -49,6 +50,10 @@ class ClassGenerator
                 $groups = $args['normalizationContext']['groups'];
             } else {
                 $groups = ['default'];
+            }
+
+            if (array_key_exists('denormalizationContext', $args) && array_key_exists('groups', $args['denormalizationContext'])) {
+                $groups = array_merge($groups, $args['denormalizationContext']['groups']);
             }
 
             foreach ($groups as $group) {
@@ -171,7 +176,16 @@ class ClassGenerator
             if (null === $type) {
                 continue;
             }
-            $field = $this->generateField($propertyName, $type, $group);
+
+            $notNullableAttributes = $property->getAttributes(JsDtoNotNullable::class);
+
+            $forceNotNullable = false;
+            /** @var JsDtoNotNullable $notNullableAttribute */
+            foreach ($notNullableAttributes as $notNullableAttribute) {
+                $forceNotNullable = $forceNotNullable || $notNullableAttribute->newInstance()->hasGroup($group);
+            }
+
+            $field = $this->generateField($propertyName, $type, $group, $forceNotNullable);
 
             $properties[] = $field['method'];
             $subClasses = array_merge($subClasses, $field['subClasses']);
@@ -237,8 +251,14 @@ class ClassGenerator
     private function generateField(
         string $fieldName,
         Type $type,
-        string $group
+        string $group,
+        bool $forceNotNullable = false
     ): array {
+
+        if ($forceNotNullable && $type instanceof Type\NullableType) {
+            $type = $type->getWrappedType();
+        }
+
         $replacements = [
             '<type>' => $this->typeConverter->convertType($type, $this->generateFilename($group)),
             '<fieldName>' => $fieldName,
