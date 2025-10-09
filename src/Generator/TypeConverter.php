@@ -105,6 +105,9 @@ class TypeConverter
                 if ($type->getTypeIdentifier()->value === 'bool') {
                     return 'boolean';
                 }
+                if ($type->getTypeIdentifier()->value === 'mixed') {
+                    return 'any';
+                }
 
                 return $type->__toString();
             case UnionType::class:
