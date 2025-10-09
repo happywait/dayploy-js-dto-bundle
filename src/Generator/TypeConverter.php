@@ -140,10 +140,25 @@ class TypeConverter
                 return $this->convertType($type->getWrappedType(), $suffix);
             case GenericType::class:
                 /** @var GenericType $type */
-                $variableType = $type->getVariableTypes() ? $type->getVariableTypes()[1] : null;
+                $variableTypes = $type->getVariableTypes();
+
+                // Handle array<string, X> as Record<string, X>
+                if ($variableTypes && count($variableTypes) >= 2) {
+                    $keyType = $variableTypes[0];
+                    $valueType = $variableTypes[1];
+
+                    // Check if this is an associative array (string keys)
+                    if ($keyType instanceof BuiltinType && $keyType->getTypeIdentifier()->value === 'string') {
+                        $convertedValueType = $this->convertType($valueType, $suffix);
+                        return 'Record<string, ' . $convertedValueType . '>';
+                    }
+                }
+
+                // Fallback to original behavior for other generic types
+                $variableType = $variableTypes ? $variableTypes[1] : null;
                 $variableTypesuffix = '';
                 if ($variableType) {
-                    $variableTypesuffix =  $this->convertType($variableType, $suffix);
+                    $variableTypesuffix = $this->convertType($variableType, $suffix);
                 }
 
                 return $variableTypesuffix.$this->convertType($type->getWrappedType(), $suffix);
