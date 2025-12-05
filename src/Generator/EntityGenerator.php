@@ -29,8 +29,14 @@ class EntityGenerator
         } else {
             $classes = $this->classGenerator->generateEntityClasses($reflectionClass);
 
-            foreach ($classes as $class) {
-                $this->writeEntityClassFile($class['content'], $class['name']);
+            // Standalone DTO (no HttpOperations): generate like enum, direct file
+            if (empty($classes)) {
+                $content = $this->classGenerator->generateStandaloneClass($reflectionClass);
+                $this->writeEntityClassFile($content, $reflectionClass->getFileName());
+            } else {
+                foreach ($classes as $class) {
+                    $this->writeEntityClassFile($class['content'], $class['name']);
+                }
             }
         }
     }

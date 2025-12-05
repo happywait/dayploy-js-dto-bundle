@@ -67,6 +67,15 @@ class ClassGenerator
         return $result;
     }
 
+    /**
+     * Generate a standalone DTO class (without HttpOperation attributes).
+     * Uses empty group to avoid suffix in type name.
+     */
+    public function generateStandaloneClass(ReflectionClass $reflectionClass): string
+    {
+        return $this->generateEntityClass($reflectionClass, '');
+    }
+
     public function generateEntityClass(
         ReflectionClass $reflectionClass,
         string $group
