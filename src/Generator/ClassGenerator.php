@@ -114,12 +114,19 @@ class ClassGenerator
             $bodyReplacement,
         ], static::$classTemplate)];
 
-        $importStrings = '';
+        $importLines = [];
 
         /** @var Type\ObjectType $subClass */
         foreach ($bodyData['subClasses'] as $subClass) {
             $subClassesData = $this->generateEntityClassData($subClass, $group);
-            $importStrings .= $subClassesData[0];
+
+            // Merge imports from subclasses, avoiding duplicates
+            foreach (explode("\n", $subClassesData[0]) as $line) {
+                $line = trim($line);
+                if ('' !== $line && !in_array($line, $importLines, true)) {
+                    $importLines[] = $line;
+                }
+            }
 
             foreach ($subClassesData[2] as $def) {
                 if (!in_array($def, $classesDefinition)) {
@@ -141,14 +148,16 @@ class ClassGenerator
                 continue;
             }
 
-            $importLine = "import { type $classname } from '$path'\n";
+            $importLine = "import { type $classname } from '$path'";
             // Avoid duplicate imports (can happen when same enum used in parent and nested DTOs)
-            if (!str_contains($importStrings, $importLine)) {
-                $importStrings .= $importLine;
+            if (!in_array($importLine, $importLines, true)) {
+                $importLines[] = $importLine;
             }
         }
 
         $this->filenameService->clearImports();
+
+        $importStrings = [] !== $importLines ? implode("\n", $importLines) . "\n" : '';
 
         return [
             $importStrings,
