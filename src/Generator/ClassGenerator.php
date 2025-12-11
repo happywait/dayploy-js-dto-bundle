@@ -141,7 +141,11 @@ class ClassGenerator
                 continue;
             }
 
-            $importStrings .= "import { type $classname } from '$path'\n";
+            $importLine = "import { type $classname } from '$path'\n";
+            // Avoid duplicate imports (can happen when same enum used in parent and nested DTOs)
+            if (!str_contains($importStrings, $importLine)) {
+                $importStrings .= $importLine;
+            }
         }
 
         $this->filenameService->clearImports();
