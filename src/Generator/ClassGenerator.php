@@ -249,7 +249,12 @@ class ClassGenerator
     ): bool {
         foreach ($attributes as $attribute) {
             if ($attribute->getName() === JsDtoIgnore::class) {
-                return false;
+                $instance = $attribute->newInstance();
+                if ($instance->hasGroup($group)) {
+                    return false;
+                }
+                // Continue checking other attributes if group doesn't match
+                continue;
             }
             if (in_array($attribute->getName(), [Groups::class, \Symfony\Component\Serializer\Annotation\Groups::class])) {
                 $args = $attribute->getArguments();
