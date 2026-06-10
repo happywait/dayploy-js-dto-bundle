@@ -36,7 +36,14 @@ export enum <entityClassName> {
         $cases = $reflectionClass->getConstants();
 
         foreach ($cases as $case) {
-            $value = $case->value;
+            // getConstants() returns *every* class constant, not only enum cases.
+            // Skip regular constants (helper consts, arrays, …): they are not enum
+            // instances and have no ->name/->value, so reading them would crash.
+            if (!$case instanceof \UnitEnum) {
+                continue;
+            }
+
+            $value = $case instanceof \BackedEnum ? $case->value : $case->name;
             if (is_string($value)) {
                 $value = '\''.$value.'\'';
             }
