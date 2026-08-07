@@ -36,8 +36,13 @@ class ClassGenerator
     ) {
     }
 
+    /**
+     * @param string[] $uriPrefixes when non-empty, only operations whose
+     *                              uriTemplate starts with one of them are generated
+     */
     public function generateEntityClasses(
         ReflectionClass $reflectionClass,
+        array $uriPrefixes = [],
     ): array {
         $routeAttributes = $reflectionClass->getAttributes(HttpOperation::class, \ReflectionAttribute::IS_INSTANCEOF);
 
@@ -46,6 +51,12 @@ class ClassGenerator
         /** @var HttpOperation $routeAttribute */
         foreach ($routeAttributes as $routeAttribute) {
             $args = $routeAttribute->getArguments();
+
+            if (!$this->matchesUriPrefix($args, $uriPrefixes)) {
+                $this->logger->info('FILTERED OUT: '.$reflectionClass->getName());
+                continue;
+            }
+
             if (array_key_exists('normalizationContext', $args) && array_key_exists('groups', $args['normalizationContext'])) {
                 $groups = $args['normalizationContext']['groups'];
             } else {
@@ -74,6 +85,44 @@ class ClassGenerator
     public function generateStandaloneClass(ReflectionClass $reflectionClass): string
     {
         return $this->generateEntityClass($reflectionClass, '');
+    }
+
+    /**
+     * Does at least one of this class's operations serve one of these routes?
+     *
+     * An empty $uriPrefixes means "no filtering" — every operation matches,
+     * which is what keeps the unfiltered run byte-for-byte identical.
+     *
+     * ⚠️ An operation without a uriTemplate NEVER matches a prefix. Those
+     * exist (API Platform derives the path from the shortName), and there is
+     * no way to know their path from the attribute alone. Filtering is
+     * therefore opt-in per route, and silently drops anything that cannot
+     * state where it lives.
+     *
+     * @param array<int|string, mixed> $args
+     * @param string[]                 $uriPrefixes
+     */
+    private function matchesUriPrefix(array $args, array $uriPrefixes): bool
+    {
+        if ([] === $uriPrefixes) {
+            return true;
+        }
+
+        // uriTemplate is HttpOperation's first constructor argument, so it can
+        // be passed positionally too.
+        $uriTemplate = $args['uriTemplate'] ?? $args[0] ?? null;
+
+        if (!is_string($uriTemplate)) {
+            return false;
+        }
+
+        foreach ($uriPrefixes as $uriPrefix) {
+            if (str_starts_with($uriTemplate, $uriPrefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function generateEntityClass(

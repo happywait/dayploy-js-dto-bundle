@@ -8,7 +8,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Dayploy\\JsDtoBundle\\Tests\\": "tests/"
+            "Dayploy\\JsDtoBundle\\Tests\\": "tests/",
+            "Dayploy\\JsDtoBundle\\TestRoutes\\": "tests/routes/"
         }
     },
     "license": "MIT",
@@ -21,9 +22,10 @@
         "symfony/string": "^7.2"
     },
     "require-dev": {
+        "api-platform/metadata": "^4.0",
+        "doctrine/collections": "^2.1",
         "nyholm/symfony-bundle-test": "^3.0",
         "phpunit/phpunit": "^10.3",
-        "symfony/uid": "^7.2",
-        "doctrine/collections": "^2.1"
+        "symfony/uid": "^7.2"
     }
 }

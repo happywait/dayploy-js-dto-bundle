@@ -17,8 +17,12 @@ class EntityGenerator
     ) {
     }
 
+    /**
+     * @param string[] $uriPrefixes see ClassGenerator::generateEntityClasses()
+     */
     public function writeEntityClass(
         ReflectionClass $reflectionClass,
+        array $uriPrefixes = [],
     ): void {
         $this->logger->info('CLASS: '.$reflectionClass->getName());
 
@@ -27,10 +31,18 @@ class EntityGenerator
 
             $this->writeEntityClassFile($content, $reflectionClass->getFileName());
         } else {
-            $classes = $this->classGenerator->generateEntityClasses($reflectionClass);
+            $classes = $this->classGenerator->generateEntityClasses($reflectionClass, $uriPrefixes);
 
             // Standalone DTO (no HttpOperations): generate like enum, direct file
             if (empty($classes)) {
+                // ⚠️ Under a filter, an empty result means "nothing matched",
+                // NOT "standalone DTO". Falling back here would write every
+                // filtered-out class as a group-less type — the filter would
+                // shrink the output without ever removing a class.
+                if ([] !== $uriPrefixes) {
+                    return;
+                }
+
                 $content = $this->classGenerator->generateStandaloneClass($reflectionClass);
                 $this->writeEntityClassFile($content, $reflectionClass->getFileName());
             } else {

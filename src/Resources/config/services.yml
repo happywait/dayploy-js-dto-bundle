@@ -25,6 +25,7 @@ services:
         class: "Dayploy\\JsDtoBundle\\Generator\\Generator"
         arguments:
             - '@Dayploy\JsDtoBundle\Generator\EntityGenerator'
+            - '@Dayploy\JsDtoBundle\Generator\FilenameService'
     Dayploy\JsDtoBundle\Generator\FilenameService:
         public: true
         class: "Dayploy\\JsDtoBundle\\Generator\\FilenameService"

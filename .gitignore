@@ -3,3 +3,11 @@
 /.phpunit.cache/test-results
 /tests/src/Entity/ForeignClass.ts
 /tests/src/Entity/MyClass.ts
+/tests/src/Entity/CustomerRouteClass
+/tests/src/Entity/PromoterRouteClass
+/tests/src/Entity/CustomerOnlyEnum.ts
+/tests/src/Entity/PromoterOnlyEnum.ts
+/tests/src/Entity/EnumWithConstant.ts
+/tests/routes/Entity/*.ts
+/tests/routes/Entity/CustomerRouteClass
+/tests/routes/Entity/PromoterRouteClass
