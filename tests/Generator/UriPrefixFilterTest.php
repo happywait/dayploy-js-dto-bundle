@@ -43,6 +43,8 @@ class UriPrefixFilterTest extends AbstractTestCase
         'PromoterOnlyEnum.ts',
         'StandaloneRouteClass.ts',
         'NestedRouteClass.ts',
+        'MixedRouteClass/Default.ts',
+        'NoUriTemplateRouteClass/Default.ts',
     ];
 
     protected function setUp(): void
@@ -132,6 +134,18 @@ class UriPrefixFilterTest extends AbstractTestCase
 
         $this->assertGenerated('CustomerRouteClass/Default.ts');
         $this->assertGenerated('PromoterRouteClass/Default.ts');
+    }
+
+    /**
+     * ⚠️ An operation that cannot state its path is not provably part of the
+     * kept family, so it is dropped. The mirror rule lives in
+     * ExcludeUriPrefixFilterTest, which keeps it.
+     */
+    public function testAnOperationWithoutAUriTemplateIsDropped(): void
+    {
+        $this->generate(['/v4/customer']);
+
+        $this->assertNotGenerated('NoUriTemplateRouteClass/Default.ts');
     }
 
     // ---------------------------------------------------------------- helpers

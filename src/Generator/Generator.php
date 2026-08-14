@@ -16,12 +16,17 @@ class Generator
 
     /**
      * @param string[] $directories
-     * @param string[] $uriPrefixes when non-empty, only DTOs serving one of
-     *                              these route prefixes are generated, plus the
-     *                              enums they reference
+     * @param string[] $uriPrefixes        when non-empty, only DTOs serving one of
+     *                                     these route prefixes are generated, plus the
+     *                                     enums they reference
+     * @param string[] $excludeUriPrefixes the mirror: operations serving one of these
+     *                                     prefixes are dropped, everything else is kept
      */
-    public function generate(array $directories, array $uriPrefixes = []): void
-    {
+    public function generate(
+        array $directories,
+        array $uriPrefixes = [],
+        array $excludeUriPrefixes = [],
+    ): void {
         $factoryAnnotation = new AnnotationCollectionFactory($directories);
         $classes = $factoryAnnotation->create();
 
@@ -37,10 +42,18 @@ class Generator
                 continue;
             }
 
-            $this->entityGenerator->writeEntityClass($reflectionClass, $uriPrefixes);
+            $this->entityGenerator->writeEntityClass($reflectionClass, $uriPrefixes, $excludeUriPrefixes);
         }
 
-        // No filter: every enum ships, exactly as before.
+        // ⚠️ Every enum ships unless an INCLUDE filter narrowed the run.
+        //
+        // --exclude-uri-prefix deliberately does not shrink the enum set: an
+        // unfiltered run has always shipped all of them, referenced or not,
+        // and a front imports enums its own code uses without any DTO
+        // mentioning them (36 of them here — ModuleEnum, CurrencyEnum,
+        // SortEnum…). Following references under exclusion would delete those
+        // from the front that asked for "everything else". A customer-only
+        // enum landing there too is the cheap side of that trade.
         if ([] === $uriPrefixes) {
             foreach ($enums as $reflectionClass) {
                 $this->entityGenerator->writeEntityClass($reflectionClass);

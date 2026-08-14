@@ -37,12 +37,18 @@ class ClassGenerator
     }
 
     /**
-     * @param string[] $uriPrefixes when non-empty, only operations whose
-     *                              uriTemplate starts with one of them are generated
+     * @param string[] $uriPrefixes        when non-empty, only operations whose
+     *                                     uriTemplate starts with one of them are generated
+     * @param string[] $excludeUriPrefixes when non-empty, operations whose uriTemplate
+     *                                     starts with one of them are dropped. Applied
+     *                                     after $uriPrefixes, and per operation: a DTO
+     *                                     serving both an excluded route and a kept one
+     *                                     survives through the kept one.
      */
     public function generateEntityClasses(
         ReflectionClass $reflectionClass,
         array $uriPrefixes = [],
+        array $excludeUriPrefixes = [],
     ): array {
         $routeAttributes = $reflectionClass->getAttributes(HttpOperation::class, \ReflectionAttribute::IS_INSTANCEOF);
 
@@ -54,6 +60,11 @@ class ClassGenerator
 
             if (!$this->matchesUriPrefix($args, $uriPrefixes)) {
                 $this->logger->info('FILTERED OUT: '.$reflectionClass->getName());
+                continue;
+            }
+
+            if ($this->matchesExcludedUriPrefix($args, $excludeUriPrefixes)) {
+                $this->logger->info('EXCLUDED: '.$reflectionClass->getName());
                 continue;
             }
 
@@ -76,6 +87,17 @@ class ClassGenerator
         }
 
         return $result;
+    }
+
+    /**
+     * Does this class declare any route at all?
+     *
+     * Tells "standalone DTO" apart from "every operation was filtered out",
+     * which an empty generateEntityClasses() result alone cannot.
+     */
+    public function hasHttpOperations(ReflectionClass $reflectionClass): bool
+    {
+        return [] !== $reflectionClass->getAttributes(HttpOperation::class, \ReflectionAttribute::IS_INSTANCEOF);
     }
 
     /**
@@ -118,6 +140,39 @@ class ClassGenerator
 
         foreach ($uriPrefixes as $uriPrefix) {
             if (str_starts_with($uriTemplate, $uriPrefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Does this operation serve one of the excluded routes?
+     *
+     * ⚠️ Mirror of matchesUriPrefix(), with the SAME rule for a missing
+     * uriTemplate read the other way round: an operation that cannot state
+     * where it lives is not provably part of the excluded family, so it is
+     * KEPT. Include drops the unknown, exclude keeps it — both err towards the
+     * front that asked for "everything else".
+     *
+     * @param array<int|string, mixed> $args
+     * @param string[]                 $excludeUriPrefixes
+     */
+    private function matchesExcludedUriPrefix(array $args, array $excludeUriPrefixes): bool
+    {
+        if ([] === $excludeUriPrefixes) {
+            return false;
+        }
+
+        $uriTemplate = $args['uriTemplate'] ?? $args[0] ?? null;
+
+        if (!is_string($uriTemplate)) {
+            return false;
+        }
+
+        foreach ($excludeUriPrefixes as $excludeUriPrefix) {
+            if (str_starts_with($uriTemplate, $excludeUriPrefix)) {
                 return true;
             }
         }

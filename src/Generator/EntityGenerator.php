@@ -18,11 +18,13 @@ class EntityGenerator
     }
 
     /**
-     * @param string[] $uriPrefixes see ClassGenerator::generateEntityClasses()
+     * @param string[] $uriPrefixes        see ClassGenerator::generateEntityClasses()
+     * @param string[] $excludeUriPrefixes idem
      */
     public function writeEntityClass(
         ReflectionClass $reflectionClass,
         array $uriPrefixes = [],
+        array $excludeUriPrefixes = [],
     ): void {
         $this->logger->info('CLASS: '.$reflectionClass->getName());
 
@@ -31,7 +33,7 @@ class EntityGenerator
 
             $this->writeEntityClassFile($content, $reflectionClass->getFileName());
         } else {
-            $classes = $this->classGenerator->generateEntityClasses($reflectionClass, $uriPrefixes);
+            $classes = $this->classGenerator->generateEntityClasses($reflectionClass, $uriPrefixes, $excludeUriPrefixes);
 
             // Standalone DTO (no HttpOperations): generate like enum, direct file
             if (empty($classes)) {
@@ -40,6 +42,14 @@ class EntityGenerator
                 // filtered-out class as a group-less type — the filter would
                 // shrink the output without ever removing a class.
                 if ([] !== $uriPrefixes) {
+                    return;
+                }
+
+                // Same trap under --exclude-uri-prefix, but only for a class
+                // that HAD operations and lost them all. A genuinely
+                // operation-less DTO belongs to no route family, so no
+                // exclusion can name it: it keeps shipping.
+                if ([] !== $excludeUriPrefixes && $this->classGenerator->hasHttpOperations($reflectionClass)) {
                     return;
                 }
 

@@ -27,6 +27,12 @@ class EntitiesCommand extends Command
                 InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
                 'Only generate DTOs whose uriTemplate starts with this prefix (repeatable). Referenced enums are pulled in automatically. Without it, everything is generated.',
             )
+            ->addOption(
+                'exclude-uri-prefix',
+                null,
+                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+                'Drop the operations whose uriTemplate starts with this prefix (repeatable). The mirror of --uri-prefix: hands a front everything BUT one route family.',
+            )
             ->setHelp(<<<'HELP'
 Generate TypeScript types from PHP DTOs carrying #[JsDto].
 
@@ -36,9 +42,14 @@ Generate TypeScript types from PHP DTOs carrying #[JsDto].
   <info>%command.full_name% --uri-prefix=/v4/customer</info>
     Only the DTOs serving /v4/customer routes, plus the enums they use.
 
-⚠️ An operation without an explicit <comment>uriTemplate</comment> can never match a
-prefix — its path is derived by API Platform and is unknowable from the
-attribute. Such DTOs are silently skipped when filtering.
+  <info>%command.full_name% --exclude-uri-prefix=/v4/customer</info>
+    Everything except those — the two runs partition the model between
+    the promoter front and the consumer one.
+
+⚠️ An operation without an explicit <comment>uriTemplate</comment> has a path derived by
+API Platform, unknowable from the attribute alone. Both filters therefore
+treat it as "not provably part of the named family": <comment>--uri-prefix</comment> skips it,
+<comment>--exclude-uri-prefix</comment> keeps it.
 HELP)
         ;
     }
@@ -47,8 +58,10 @@ HELP)
     {
         /** @var string[] $uriPrefixes */
         $uriPrefixes = $input->getOption('uri-prefix');
+        /** @var string[] $excludeUriPrefixes */
+        $excludeUriPrefixes = $input->getOption('exclude-uri-prefix');
 
-        $this->generator->generate(['src'], $uriPrefixes);
+        $this->generator->generate(['src'], $uriPrefixes, $excludeUriPrefixes);
 
         return Command::SUCCESS;
     }

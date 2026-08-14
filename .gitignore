@@ -11,3 +11,5 @@
 /tests/routes/Entity/*.ts
 /tests/routes/Entity/CustomerRouteClass
 /tests/routes/Entity/PromoterRouteClass
+/tests/routes/Entity/MixedRouteClass
+/tests/routes/Entity/NoUriTemplateRouteClass
