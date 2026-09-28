@@ -69,24 +69,56 @@ class ClassGenerator
             }
 
             if (array_key_exists('normalizationContext', $args) && array_key_exists('groups', $args['normalizationContext'])) {
-                $groups = $args['normalizationContext']['groups'];
+                $normalizationGroups = $args['normalizationContext']['groups'];
             } else {
-                $groups = ['default'];
+                $normalizationGroups = ['default'];
             }
 
+            $denormalizationGroups = [];
             if (array_key_exists('denormalizationContext', $args) && array_key_exists('groups', $args['denormalizationContext'])) {
-                $groups = array_merge($groups, $args['denormalizationContext']['groups']);
+                $denormalizationGroups = $args['denormalizationContext']['groups'];
             }
 
-            foreach ($groups as $group) {
+            $outputClass = $this->outputClassOf($args, $reflectionClass);
+
+            foreach (array_merge($normalizationGroups, $denormalizationGroups) as $group) {
+                // The response of an operation declaring `output:` is that class, not the
+                // input one: describing the input class in a normalization group yielded `{}`.
+                // A group that is ALSO a denormalization group keeps describing the input,
+                // the request being the only thing the file can type for both.
+                $source = null !== $outputClass
+                    && in_array($group, $normalizationGroups, true)
+                    && !in_array($group, $denormalizationGroups, true)
+                    ? $outputClass
+                    : $reflectionClass;
+
                 $result[] = [
                     'name' => $this->generateFilepath($reflectionClass, $group),
-                    'content' => $this->generateEntityClass($reflectionClass, $group)
+                    'content' => $this->generateEntityClass($source, $group, $reflectionClass->getShortName()),
                 ];
             }
         }
 
         return $result;
+    }
+
+    /**
+     * The class an operation answers with, when `output:` names another one.
+     *
+     * The type keeps the input class's name and path (`CreateProjectAction/ProjectRead.ts`
+     * holds `CreateProjectActionProjectRead`), so what the front imports does not move.
+     *
+     * @param array<int|string, mixed> $args
+     */
+    private function outputClassOf(array $args, ReflectionClass $reflectionClass): ?ReflectionClass
+    {
+        $output = $args['output'] ?? null;
+
+        if (!is_string($output) || !class_exists($output) || $output === $reflectionClass->getName()) {
+            return null;
+        }
+
+        return new ReflectionClass($output);
     }
 
     /**
@@ -180,9 +212,14 @@ class ClassGenerator
         return false;
     }
 
+    /**
+     * @param string|null $typeName the top-level type's name without its group suffix, when it
+     *                              is not the described class's own (see outputClassOf())
+     */
     public function generateEntityClass(
         ReflectionClass $reflectionClass,
-        string $group
+        string $group,
+        ?string $typeName = null,
     ): string {
         $placeHolders = [
             '<imports>',
@@ -190,7 +227,7 @@ class ClassGenerator
             '<classes>'
         ];
 
-        $data = $this->generateEntityClassData($reflectionClass, $group);
+        $data = $this->generateEntityClassData($reflectionClass, $group, $typeName);
 
         return str_replace($placeHolders, [
             $data[0],
@@ -201,7 +238,8 @@ class ClassGenerator
 
     public function generateEntityClassData(
         ReflectionClass $reflectionClass,
-        string $group
+        string $group,
+        ?string $typeName = null,
     ): array {
         $placeHolders = [
             '<entityClassName>',
@@ -214,7 +252,7 @@ class ClassGenerator
         $bodyReplacement = $bodyData['body'];
 
         $classesDefinition = [str_replace($placeHolders, [
-            $entityClassName.$this->generateFilename($group),
+            ($typeName ?? $entityClassName).$this->generateFilename($group),
             $bodyReplacement,
         ], static::$classTemplate)];
 

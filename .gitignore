@@ -13,3 +13,4 @@
 /tests/routes/Entity/PromoterRouteClass
 /tests/routes/Entity/MixedRouteClass
 /tests/routes/Entity/NoUriTemplateRouteClass
+/tests/routes/Entity/OutputActionClass
