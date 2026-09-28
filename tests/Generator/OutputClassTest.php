@@ -18,8 +18,8 @@ class OutputClassTest extends AbstractTestCase
     {
         parent::setUp();
 
-        foreach (['ThingRead.ts', 'ThingCreate.ts', 'ThingUpdate.ts'] as $file) {
-            @unlink(self::ENTITY_DIR.'/OutputActionClass/'.$file);
+        foreach (['OutputActionClass/ThingRead.ts', 'OutputActionClass/ThingCreate.ts', 'OutputActionClass/ThingUpdate.ts', 'OutputActionClass/ThingUpdateOutput.ts', 'OutputNoGroupActionClass/Default.ts', 'OutputNoGroupActionClass/DefaultOutput.ts'] as $file) {
+            @unlink(self::ENTITY_DIR.'/'.$file);
         }
 
         /** @var Generator $generator */
@@ -49,15 +49,26 @@ class OutputClassTest extends AbstractTestCase
         $this->assertStringContainsString("export type OutputActionClassThingCreate = {\n  name: string\n}", $this->generated('ThingCreate.ts'));
     }
 
-    /** A group serving the request AND the response keeps typing the request. */
+    /** A group serving the request AND the response keeps typing the request; the response gets `…Output.ts`. */
     public function testAGroupAlsoDenormalizedKeepsTheInputClass(): void
     {
         $this->assertStringContainsString("export type OutputActionClassThingUpdate = {\n  name: string\n}", $this->generated('ThingUpdate.ts'));
+        $this->assertStringContainsString("export type OutputActionClassThingUpdateOutput = {\n  label: string\n}", $this->generated('ThingUpdateOutput.ts'));
     }
 
-    private function generated(string $file): string
+    /**
+     * ⚠️ No group declared at all: `default` is the request's group too. It must keep typing
+     * the body sent — answering it with the output class broke two fronts' request types.
+     */
+    public function testWithoutGroupsDefaultStillTypesTheRequest(): void
     {
-        $path = self::ENTITY_DIR.'/OutputActionClass/'.$file;
+        $this->assertStringContainsString("export type OutputNoGroupActionClassDefault = {\n  replacement: string\n}", $this->generated('Default.ts', 'OutputNoGroupActionClass'));
+        $this->assertStringContainsString("export type OutputNoGroupActionClassDefaultOutput = {\n  completed: boolean\n}", $this->generated('DefaultOutput.ts', 'OutputNoGroupActionClass'));
+    }
+
+    private function generated(string $file, string $class = 'OutputActionClass'): string
+    {
+        $path = self::ENTITY_DIR.'/'.$class.'/'.$file;
         $this->assertFileExists($path);
 
         return trim((string) file_get_contents($path));

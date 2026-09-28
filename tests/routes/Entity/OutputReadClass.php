@@ -13,7 +13,7 @@ class OutputReadClass
     #[Groups(['thing:read'])]
     private int $id;
 
-    #[Groups(['thing:read'])]
+    #[Groups(['thing:read', 'thing:update'])]
     private string $label;
 
     #[Groups(['thing:read'])]

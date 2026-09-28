@@ -18,6 +18,9 @@ use Symfony\Component\TypeInfo\Type;
 
 class ClassGenerator
 {
+    /** Suffix of the response type when its group also types the request. */
+    private const string OUTPUT_SUFFIX = 'Output';
+
     private static string $fileTemplate = '<imports>
 
 <classes>
@@ -74,28 +77,44 @@ class ClassGenerator
                 $normalizationGroups = ['default'];
             }
 
-            $denormalizationGroups = [];
             if (array_key_exists('denormalizationContext', $args) && array_key_exists('groups', $args['denormalizationContext'])) {
                 $denormalizationGroups = $args['denormalizationContext']['groups'];
+            } elseif (!array_key_exists('normalizationContext', $args)) {
+                // No group declared at all: `default` serves the request AND the response.
+                $denormalizationGroups = ['default'];
+            } else {
+                $denormalizationGroups = [];
             }
 
             $outputClass = $this->outputClassOf($args, $reflectionClass);
 
-            foreach (array_merge($normalizationGroups, $denormalizationGroups) as $group) {
+            foreach (array_unique(array_merge($normalizationGroups, $denormalizationGroups)) as $group) {
+                $isResponse = in_array($group, $normalizationGroups, true);
+                $isRequest = in_array($group, $denormalizationGroups, true);
+
                 // The response of an operation declaring `output:` is that class, not the
                 // input one: describing the input class in a normalization group yielded `{}`.
-                // A group that is ALSO a denormalization group keeps describing the input,
-                // the request being the only thing the file can type for both.
-                $source = null !== $outputClass
-                    && in_array($group, $normalizationGroups, true)
-                    && !in_array($group, $denormalizationGroups, true)
-                    ? $outputClass
-                    : $reflectionClass;
+                // A group that ALSO types the request keeps describing the input in its file,
+                // and the response gets a file of its own (`<Group>Output.ts`).
+                $source = null !== $outputClass && $isResponse && !$isRequest ? $outputClass : $reflectionClass;
 
                 $result[] = [
                     'name' => $this->generateFilepath($reflectionClass, $group),
                     'content' => $this->generateEntityClass($source, $group, $reflectionClass->getShortName()),
                 ];
+
+                if (null !== $outputClass && $isResponse && $isRequest) {
+                    $content = $this->generateEntityClass($outputClass, $group, $reflectionClass->getShortName(), self::OUTPUT_SUFFIX);
+
+                    // An output class with nothing in this group answers nothing typable:
+                    // no file rather than one more `{}`
+                    if (!preg_match('/export type \w+'.self::OUTPUT_SUFFIX.' = \{\s*\}/', $content)) {
+                        $result[] = [
+                            'name' => $this->generateFilepath($reflectionClass, $group, self::OUTPUT_SUFFIX),
+                            'content' => $content,
+                        ];
+                    }
+                }
             }
         }
 
@@ -220,6 +239,7 @@ class ClassGenerator
         ReflectionClass $reflectionClass,
         string $group,
         ?string $typeName = null,
+        string $typeSuffix = '',
     ): string {
         $placeHolders = [
             '<imports>',
@@ -227,7 +247,7 @@ class ClassGenerator
             '<classes>'
         ];
 
-        $data = $this->generateEntityClassData($reflectionClass, $group, $typeName);
+        $data = $this->generateEntityClassData($reflectionClass, $group, $typeName, $typeSuffix);
 
         return str_replace($placeHolders, [
             $data[0],
@@ -240,6 +260,7 @@ class ClassGenerator
         ReflectionClass $reflectionClass,
         string $group,
         ?string $typeName = null,
+        string $typeSuffix = '',
     ): array {
         $placeHolders = [
             '<entityClassName>',
@@ -252,7 +273,7 @@ class ClassGenerator
         $bodyReplacement = $bodyData['body'];
 
         $classesDefinition = [str_replace($placeHolders, [
-            ($typeName ?? $entityClassName).$this->generateFilename($group),
+            ($typeName ?? $entityClassName).$this->generateFilename($group).$typeSuffix,
             $bodyReplacement,
         ], static::$classTemplate)];
 
@@ -447,14 +468,15 @@ class ClassGenerator
 
     private function generateFilepath(
         ReflectionClass $reflectionClass,
-        string $group
+        string $group,
+        string $suffix = '',
     ): string {
         $folder = $reflectionClass->getFileName();
         $folder = explode('.', $folder);
         $extension = $folder[1];
         $folder = $folder[0];
 
-        return $folder.'/'.$this->generateFilename($group).'.'.$extension;
+        return $folder.'/'.$this->generateFilename($group).$suffix.'.'.$extension;
     }
 
     private function generateFilename(

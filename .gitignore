@@ -15,3 +15,4 @@
 /tests/routes/Entity/NoUriTemplateRouteClass
 /tests/routes/Entity/OutputActionClass
 /tests/routes/Entity/OutputReadClass
+/tests/routes/Entity/OutputNoGroupActionClass
