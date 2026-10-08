@@ -16,3 +16,5 @@
 /tests/routes/Entity/OutputActionClass
 /tests/routes/Entity/OutputReadClass
 /tests/routes/Entity/OutputNoGroupActionClass
+/tests/routes/Entity/EnumArrayRouteClass
+/tests/routes/Enum/*.ts

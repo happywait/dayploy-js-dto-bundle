@@ -35,6 +35,14 @@ class TypeConverter
                     return [];
                 }
 
+                // An enum typed through the PHPDoc (`@var SizeEnum[]`) arrives as an
+                // ObjectType, not as an enum type. It is imported, never inlined: as a
+                // nested class it came out as `{ name, value }`, and its generation
+                // dropped its own import — the array referenced an unimported type.
+                if (enum_exists($type->getClassName())) {
+                    return [];
+                }
+
                 return [new \ReflectionClass($type->getClassName())];
             case UnionType::class:
                 /** @var UnionType $type */
