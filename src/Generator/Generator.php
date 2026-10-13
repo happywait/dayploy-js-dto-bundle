@@ -14,6 +14,11 @@ class Generator
     ) {
     }
 
+    public function getDestinationDirectory(): string
+    {
+        return $this->entityGenerator->getDestinationDirectory();
+    }
+
     /**
      * @param string[] $directories
      * @param string[] $uriPrefixes        when non-empty, only DTOs serving one of
@@ -21,12 +26,16 @@ class Generator
      *                                     enums they reference
      * @param string[] $excludeUriPrefixes the mirror: operations serving one of these
      *                                     prefixes are dropped, everything else is kept
+     *
+     * @return string[] the .ts files written by this run
      */
     public function generate(
         array $directories,
         array $uriPrefixes = [],
         array $excludeUriPrefixes = [],
-    ): void {
+    ): array {
+        $this->entityGenerator->resetWrittenFiles();
+
         $factoryAnnotation = new AnnotationCollectionFactory($directories);
         $classes = $factoryAnnotation->create();
 
@@ -59,7 +68,7 @@ class Generator
                 $this->entityGenerator->writeEntityClass($reflectionClass);
             }
 
-            return;
+            return $this->entityGenerator->getWrittenFiles();
         }
 
         // ⚠️ Enums are the ONLY cross-file dependency: nested DTOs are inlined
@@ -74,5 +83,7 @@ class Generator
                 $this->entityGenerator->writeEntityClass($reflectionClass);
             }
         }
+
+        return $this->entityGenerator->getWrittenFiles();
     }
 }

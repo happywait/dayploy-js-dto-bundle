@@ -347,11 +347,11 @@ class ClassGenerator
 
         foreach ($reflectionProperties as $property) {
             $propertyName = $property->getName();
-            $this->logger->info('PROPERTY: '.$propertyName);
+            $this->logger->debug('PROPERTY: '.$propertyName);
 
             $attributes = $property->getAttributes();
             if (!$this->isPropertyIncluded($attributes, $group)) {
-                $this->logger->info('IGNORED');
+                $this->logger->debug('IGNORED');
                 continue;
             }
 

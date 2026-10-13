@@ -6,6 +6,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Command\Command;
 use Dayploy\JsDtoBundle\Generator\Generator;
 
@@ -50,6 +51,9 @@ Generate TypeScript types from PHP DTOs carrying #[JsDto].
 API Platform, unknowable from the attribute alone. Both filters therefore
 treat it as "not provably part of the named family": <comment>--uri-prefix</comment> skips it,
 <comment>--exclude-uri-prefix</comment> keeps it.
+
+Output: a one-line summary. <comment>-v</comment> lists the files written, <comment>-vvv</comment> adds
+the per-class and per-property trace (tens of thousands of lines).
 HELP)
         ;
     }
@@ -61,7 +65,30 @@ HELP)
         /** @var string[] $excludeUriPrefixes */
         $excludeUriPrefixes = $input->getOption('exclude-uri-prefix');
 
-        $this->generator->generate(['src'], $uriPrefixes, $excludeUriPrefixes);
+        $files = $this->generator->generate(['src'], $uriPrefixes, $excludeUriPrefixes);
+        sort($files);
+
+        $io = new SymfonyStyle($input, $output);
+        $destination = rtrim($this->generator->getDestinationDirectory(), '/').'/';
+
+        if ($output->isVerbose()) {
+            $io->listing(array_map(
+                static fn (string $file): string => str_starts_with($file, $destination) ? substr($file, strlen($destination)) : $file,
+                $files,
+            ));
+        }
+
+        $filters = array_merge(
+            array_map(static fn (string $prefix): string => 'only '.$prefix, $uriPrefixes),
+            array_map(static fn (string $prefix): string => 'except '.$prefix, $excludeUriPrefixes),
+        );
+
+        $io->success(sprintf(
+            '%d TypeScript files written to %s%s',
+            count($files),
+            $destination,
+            [] === $filters ? '' : ' ('.implode(', ', $filters).')',
+        ));
 
         return Command::SUCCESS;
     }

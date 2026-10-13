@@ -7,6 +7,9 @@ use ReflectionClass;
 
 class EntityGenerator
 {
+    /** @var array<string, true> target paths written since the last reset, as keys */
+    private array $writtenFiles = [];
+
     public function __construct(
         private string $sourceDirectory,
         private string $destinationDirectory,
@@ -26,7 +29,7 @@ class EntityGenerator
         array $uriPrefixes = [],
         array $excludeUriPrefixes = [],
     ): void {
-        $this->logger->info('CLASS: '.$reflectionClass->getName());
+        $this->logger->debug('CLASS: '.$reflectionClass->getName());
 
         if ($reflectionClass->isEnum()) {
             $content = $this->enumGenerator->generateEntityClass($reflectionClass);
@@ -75,6 +78,25 @@ class EntityGenerator
         );
 
         file_put_contents($targetFileName, $cleanedContent);
+        $this->writtenFiles[$targetFileName] = true;
+    }
+
+    public function getDestinationDirectory(): string
+    {
+        return $this->destinationDirectory;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getWrittenFiles(): array
+    {
+        return array_keys($this->writtenFiles);
+    }
+
+    public function resetWrittenFiles(): void
+    {
+        $this->writtenFiles = [];
     }
 
     private function createDirectories(
